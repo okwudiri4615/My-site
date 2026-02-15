@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Class Timetable</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+:root{
+  --bg:#f5f7fb;
+  --card:#ffffff;
+  --primary:#5b6cff;
+  --text:#0f172a;
+  --muted:#64748b;
+}
+
+*{box-sizing:border-box}
+
+body{
+  margin:0;
+  font-family:system-ui,-apple-system,Segoe UI,Roboto;
+  background:var(--bg);
+  color:var(--text);
+}
+
+/* HEADER */
+header{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:16px;
+  font-size:20px;
+  font-weight:700;
+}
+
+/* PAGE WRAP */
+.container{
+  padding:12px;
+}
+
+/* DAY CARD */
+.day-card{
+  background:var(--card);
+  border-radius:18px;
+  padding:14px;
+  margin-bottom:16px;
+  box-shadow:0 10px 30px rgba(0,0,0,.08);
+}
+
+/* DAY TITLE */
+.day-title{
+  font-size:16px;
+  font-weight:700;
+  margin-bottom:10px;
+  color:var(--primary);
+}
+
+/* CLASS ITEM */
+.class{
+  display:grid;
+  grid-template-columns:1fr auto;
+  gap:10px;
+  padding:12px;
+  border-radius:14px;
+  background:#f8fafc;
+  margin-bottom:10px;
+}
+
+.class:last-child{margin-bottom:0}
+
+.course{
+  font-weight:700;
+}
+
+.meta{
+  font-size:12px;
+  color:var(--muted);
+  margin-top:3px;
+}
+
+.time{
+  font-size:13px;
+  font-weight:700;
+  color:#1e40af;
+  text-align:right;
+}
+
+/* LOADING */
+.loading{
+  background:var(--card);
+  padding:20px;
+  border-radius:18px;
+  text-align:center;
+  box-shadow:0 8px 24px rgba(0,0,0,.08);
+}
+</style>
+</head>
+
+<body>
+
+<header>📅 Class Timetable</header>
+
+<div class="container" id="timetable">
+  <div class="loading">Loading timetable…</div>
+</div>
+
+<script>
+const supabaseClient = supabase.createClient(
+  "https://pymotnfhhiwugjwsbmsc.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB5bW90bmZoaGl3dWdqd3NibXNjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg0OTcyMDgsImV4cCI6MjA4NDA3MzIwOH0.-zuyCvMj0A-Vzm30q0hLgev-0z8bjgvgPokBwtnFrH0"
+);
+
+const dayOrder = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
+
+async function loadTimetable(){
+  const wrap = document.getElementById("timetable");
+
+  const { data, error } = await supabaseClient
+    .from("timetable")
+    .select("*");
+
+  if(error){
+    wrap.innerHTML = "<div class='loading'>Failed to load timetable</div>";
+    console.error(error);
+    return;
+  }
+
+  if(!data || data.length === 0){
+    wrap.innerHTML = "<div class='loading'>No timetable available</div>";
+    return;
+  }
+
+  /* SORT BY DAY ORDER */
+  data.sort((a,b)=>{
+    return dayOrder.indexOf(a.day) - dayOrder.indexOf(b.day);
+  });
+
+  /* GROUP BY DAY */
+  const grouped = {};
+  data.forEach(item=>{
+    if(!grouped[item.day]) grouped[item.day] = [];
+    grouped[item.day].push(item);
+  });
+
+  wrap.innerHTML = "";
+
+  dayOrder.forEach(day=>{
+    if(!grouped[day]) return;
+
+    const card = document.createElement("div");
+    card.className = "day-card";
+
+    card.innerHTML = `<div class="day-title">${day}</div>`;
+
+    grouped[day].forEach(cls=>{
+      const row = document.createElement("div");
+      row.className = "class";
+      row.innerHTML = `
+        <div>
+          <div class="course">${cls.course}</div>
+          <div class="meta">${cls.venue} • ${cls.lecturer}</div>
+        </div>
+        <div class="time">${cls.time}</div>
+      `;
+      card.appendChild(row);
+    });
+
+    wrap.appendChild(card);
+  });
+}
+
+/* REAL-TIME AUTO UPDATE */
+supabaseClient
+  .channel("timetable-live")
+  .on(
+    "postgres_changes",
+    { event:"*", schema:"public", table:"timetable" },
+    () => loadTimetable()
+  )
+  .subscribe();
+
+loadTimetable();
+</script>
+
+</body>
+</html>

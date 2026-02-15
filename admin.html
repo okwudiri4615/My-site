@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Admin Panel</title>
+
+<style>
+body{font-family:Arial;background:#f4f6fa;margin:0}
+header{background:#1e3a8a;color:#fff;padding:15px}
+.card{background:#fff;margin:15px;padding:15px;border-radius:10px}
+button{padding:10px;background:#1e3a8a;color:#fff;border:none;width:100%}
+input,textarea{width:100%;padding:10px;margin-top:8px}
+</style>
+</head>
+
+<body>
+<header>🛠 Admin Panel</header>
+
+<div class="card">
+<h3>Post Announcement</h3>
+<input id="t" placeholder="Title">
+<textarea id="m" placeholder="Message"></textarea>
+<button onclick="post()">Post</button>
+</div>
+
+<div class="card">
+<h3>Add Timetable</h3>
+<input id="tt" placeholder="e.g Monday - Math 8am">
+<button onclick="addTT()">Add</button>
+</div>
+
+<div class="card">
+<h3>Add Activity</h3>
+<input id="ac" placeholder="Activity">
+<button onclick="addAct()">Add</button>
+</div>
+
+<script>
+let anns = JSON.parse(localStorage.getItem("announcements")) || [];
+let tt = JSON.parse(localStorage.getItem("timetable")) || [];
+let acts = JSON.parse(localStorage.getItem("activities")) || [];
+
+function post(){
+  anns.push({title:t.value,msg:m.value});
+  localStorage.setItem("announcements",JSON.stringify(anns));
+  alert("Announcement posted");
+}
+
+function addTT(){
+  tt.push(tt.value);
+  localStorage.setItem("timetable",JSON.stringify(tt));
+  alert("Timetable added");
+}
+
+function addAct(){
+  acts.push(ac.value);
+  localStorage.setItem("activities",JSON.stringify(acts));
+  alert("Activity added");
+}
+</script>
+</body>
+</html>

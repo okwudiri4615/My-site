@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Edit Profile | Nexus</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded" rel="stylesheet">
+
+<style>
+.glass{
+  background:rgba(255,255,255,.85);
+  backdrop-filter:blur(18px);
+  box-shadow:0 25px 60px rgba(0,0,0,.12);
+}
+</style>
+</head>
+
+<body class="bg-gradient-to-br from-[#f4f6fb] to-[#edf0f8] text-slate-800">
+
+<main class="max-w-3xl mx-auto p-6 space-y-6">
+
+<a href="profile.html" class="flex items-center gap-2 text-indigo-600 font-semibold">
+  <span class="material-symbols-rounded">arrow_back</span> Back to Profile
+</a>
+
+<form id="form" class="glass p-8 rounded-3xl space-y-5">
+  <h2 class="text-2xl font-black">Edit Profile</h2>
+
+  <!-- AVATAR -->
+  <div class="text-center space-y-3">
+    <img id="avatarPreview"
+         class="h-28 w-28 mx-auto rounded-full ring-4 ring-indigo-500/30 object-cover bg-slate-200">
+
+    <label class="block">
+      <input id="avatarInput" type="file" accept="image/*" class="hidden">
+      <span class="inline-flex items-center gap-2 cursor-pointer text-indigo-600 font-semibold">
+        <span class="material-symbols-rounded">photo_camera</span>
+        Change Photo
+      </span>
+    </label>
+    <p class="text-xs text-slate-500">PNG / JPG • Max 2MB</p>
+  </div>
+
+  <!-- FIELDS -->
+  <input id="full_name" placeholder="Full Name" class="w-full p-3 rounded-xl border">
+  <input id="matric_no" placeholder="Matric Number" class="w-full p-3 rounded-xl border">
+  <input id="reg_no" placeholder="Registration Number" class="w-full p-3 rounded-xl border">
+  <input id="level" placeholder="Level (e.g 200)" class="w-full p-3 rounded-xl border">
+  <input id="department" placeholder="Department" class="w-full p-3 rounded-xl border">
+  <input id="phone" placeholder="Phone Number" class="w-full p-3 rounded-xl border">
+  <input id="gender" placeholder="Gender" class="w-full p-3 rounded-xl border">
+  <input id="dob" type="date" class="w-full p-3 rounded-xl border">
+  <textarea id="address" placeholder="Address" class="w-full p-3 rounded-xl border"></textarea>
+
+  <button class="bg-indigo-600 text-white px-6 py-3 rounded-xl w-full font-bold">
+    Save Changes
+  </button>
+</form>
+
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+
+<script>
+const sb = supabase.createClient(
+  "https://pymotnfhhiwugjwsbmsc.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB5bW90bmZoaGl3dWdqd3NibXNjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg0OTcyMDgsImV4cCI6MjA4NDA3MzIwOH0.-zuyCvMj0A-Vzm30q0hLgev-0z8bjgvgPokBwtnFrH0"
+);
+
+let currentUser = null;
+let avatarFile = null;
+
+document.addEventListener("DOMContentLoaded", init);
+
+async function init(){
+  const { data:{ user } } = await sb.auth.getUser();
+  if(!user){ location.href="login.html"; return; }
+
+  currentUser = user;
+
+  const { data:profile } = await sb
+    .from("profiles")
+    .select("*")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  const name = profile?.full_name || user.email.split("@")[0];
+
+  avatarPreview.src = profile?.avatar_url ||
+    `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=6366f1&color=fff`;
+
+  // Pre-fill existing values (optional but helpful)
+  ["full_name","matric_no","reg_no","level","department","phone","gender","dob","address"]
+    .forEach(id=>{
+      if(profile?.[id]) document.getElementById(id).value = profile[id];
+    });
+}
+
+/* IMAGE PREVIEW */
+avatarInput.addEventListener("change", e=>{
+  avatarFile = e.target.files[0];
+  if(!avatarFile) return;
+
+  if(avatarFile.size > 2 * 1024 * 1024){
+    alert("Image too large (max 2MB)");
+    avatarInput.value = "";
+    return;
+  }
+
+  avatarPreview.src = URL.createObjectURL(avatarFile);
+});
+
+/* SAVE */
+form.onsubmit = async(e)=>{
+  e.preventDefault();
+  if(!currentUser) return;
+
+  const payload = {};
+
+  ["full_name","matric_no","reg_no","level","department","phone","gender","dob","address"]
+    .forEach(id=>{
+      const v = document.getElementById(id).value.trim();
+      if(v) payload[id]=v;
+    });
+
+  // UPLOAD AVATAR
+  if(avatarFile){
+    const ext = avatarFile.name.split(".").pop();
+    const path = `${currentUser.id}.${ext}`;
+
+    const { error:uploadError } = await sb
+      .storage
+      .from("avatars")
+      .upload(path, avatarFile, { upsert:true });
+
+    if(uploadError){
+      alert("Avatar upload failed");
+      return;
+    }
+
+    const { data } = sb
+      .storage
+      .from("avatars")
+      .getPublicUrl(path);
+
+    payload.avatar_url = data.publicUrl;
+  }
+
+  await sb.from("profiles").update(payload).eq("id", currentUser.id);
+
+  alert("Profile updated successfully");
+  location.href="profile.html";
+};
+</script>
+
+</body>
+</html>

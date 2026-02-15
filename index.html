@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>ND1 Computer Science Portal</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+
+body{
+  min-height:100vh;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  background:linear-gradient(135deg,#020617,#1e3a8a);
+  font-family:system-ui,-apple-system,Segoe UI,Roboto;
+  color:#e5e7eb;
+  padding:20px;
+}
+
+.container{
+  max-width:900px;
+  width:100%;
+  text-align:center;
+}
+
+h1{
+  font-size:28px;
+  margin-bottom:8px;
+  color:#38bdf8;
+}
+
+.sub{
+  font-size:15px;
+  color:#cbd5f5;
+  margin-bottom:30px;
+}
+
+.cards{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+  gap:20px;
+}
+
+.card{
+  background:rgba(2,6,23,.9);
+  border-radius:20px;
+  padding:28px 22px;
+  box-shadow:
+    0 0 18px rgba(56,189,248,.25),
+    inset 0 0 18px rgba(56,189,248,.15);
+  transition:.3s;
+}
+
+.card:hover{
+  transform:translateY(-6px) scale(1.04);
+  box-shadow:
+    0 0 35px rgba(56,189,248,.6),
+    inset 0 0 30px rgba(56,189,248,.35);
+}
+
+.icon{
+  font-size:44px;
+  margin-bottom:14px;
+}
+
+.card h3{
+  font-size:18px;
+  margin-bottom:8px;
+  color:#38bdf8;
+}
+
+.card p{
+  font-size:14px;
+  color:#94a3b8;
+  margin-bottom:20px;
+}
+
+.card button{
+  width:100%;
+  padding:14px;
+  border:none;
+  border-radius:14px;
+  background:#1e40af;
+  color:#fff;
+  font-weight:600;
+  cursor:pointer;
+  transition:.25s;
+}
+
+.card button:hover{
+  background:#2563eb;
+}
+
+.footer{
+  margin-top:35px;
+  font-size:13px;
+  color:#64748b;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+  <h1>🎓 ND1 Computer Science Portal</h1>
+  <div class="sub">
+    Central platform for students, moderators & administrators
+  </div>
+
+  <div class="cards">
+
+    <!-- STUDENT -->
+    <div class="card">
+      <div class="icon">🧑‍🎓</div>
+      <h3>Student</h3>
+      <p>
+        View timetable, announcements, assignments,
+        and personal profile.
+      </p>
+      <button onclick="go('login.html')">Student Login</button>
+    </div>
+
+    <!-- MODERATOR -->
+    <div class="card">
+      <div class="icon">🧑‍💼</div>
+      <h3>Moderator</h3>
+      <p>
+        Post notices, manage timetable,
+        assist course representatives.
+      </p>
+      <button onclick="go('moderator/login.html')">Moderator Login</button>
+    </div>
+
+    <!-- ADMIN -->
+    <div class="card">
+      <div class="icon">👨‍💻</div>
+      <h3>Administrator</h3>
+      <p>
+        Full system control, user management,
+        permissions & content approval.
+      </p>
+      <button onclick="go('admin/admin-login.html')">Admin Login</button>
+    </div>
+
+  </div>
+
+  <div class="footer">
+    © 2026 ND1 Computer Science • Built for class collaboration
+  </div>
+</div>
+
+<script>
+function go(page){
+  window.location.href = page;
+}
+</script>
+
+</body>
+</html>

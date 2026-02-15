@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Activities</title>
+
+<style>
+body{font-family:Arial;background:#ecfeff;margin:0}
+header{background:#0891b2;color:#fff;padding:15px}
+.card{background:#fff;margin:15px;padding:15px;border-radius:10px}
+</style>
+</head>
+
+<body>
+<header>🎯 Class Activities</header>
+<div id="act"></div>
+
+<script>
+let acts = JSON.parse(localStorage.getItem("activities")) || [];
+let a = document.getElementById("act");
+
+if(acts.length===0){
+  a.innerHTML="<div class='card'>No activities yet</div>";
+}else{
+  acts.forEach(x=>a.innerHTML+=`<div class='card'>${x}</div>`);
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Notices Portal</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+
+<body class="bg-slate-100 min-h-screen p-4">
+
+<audio id="notifySound" src="sounds/notify.mp3"></audio>
+<audio id="urgentSound" src="sounds/urgent.mp3"></audio>
+
+<div class="max-w-6xl mx-auto">
+
+  <!-- HEADER -->
+  <div class="flex justify-between items-center mb-6">
+    <h1 class="text-2xl font-bold">📢 Notices</h1>
+    <span id="roleBadge" class="px-3 py-1 rounded-full text-xs font-bold"></span>
+  </div>
+
+  <!-- ADMIN PANEL -->
+  <div id="adminPanel" class="bg-white p-6 rounded-xl shadow mb-6 hidden">
+    <h2 class="font-bold mb-4">Create Notice</h2>
+    <input id="title" placeholder="Title" class="w-full mb-3 p-3 border rounded">
+    <textarea id="content" placeholder="Content" class="w-full mb-3 p-3 border rounded"></textarea>
+
+    <div class="flex gap-3 mb-3">
+      <select id="department" class="p-2 border rounded">
+        <option value="all">All Departments</option>
+        <option value="cs">Computer Science</option>
+        <option value="it">IT</option>
+      </select>
+      <input id="expiry" type="date" class="p-2 border rounded">
+    </div>
+
+    <label class="flex items-center gap-2 mb-3">
+      <input id="urgent" type="checkbox"> Urgent
+    </label>
+
+    <button id="createBtn" class="bg-indigo-600 text-white px-4 py-2 rounded">
+      Publish Notice
+    </button>
+  </div>
+
+  <!-- NOTICE LIST -->
+  <div id="noticeList" class="space-y-4"></div>
+
+</div>
+
+<script>
+/* ================= CONFIG ================= */
+const SUPABASE_URL = "https://pymotnfhhiwugjwsbmsc.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB5bW90bmZoaGl3dWdqd3NibXNjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg0OTcyMDgsImV4cCI6MjA4NDA3MzIwOH0.-zuyCvMj0A-Vzm30q0hLgev-0z8bjgvgPokBwtnFrH0";
+const supabase = supabaseJs.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const notifySound = document.getElementById("notifySound");
+const urgentSound = document.getElementById("urgentSound");
+
+let currentUser, role, department;
+
+/* ================= INIT ================= */
+async function init() {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) location.href = "login.html";
+  currentUser = user;
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role, department")
+    .eq("id", user.id)
+    .single();
+
+  role = profile.role;
+  department = profile.department || "all";
+
+  document.getElementById("roleBadge").textContent = role.toUpperCase();
+  document.getElementById("roleBadge").className =
+    role === "admin"
+      ? "bg-green-100 text-green-700 px-3 py-1 rounded-full"
+      : "bg-blue-100 text-blue-700 px-3 py-1 rounded-full";
+
+  if (role === "admin") {
+    document.getElementById("adminPanel").classList.remove("hidden");
+  }
+
+  requestNotificationPermission();
+  loadNotices();
+  realtime();
+}
+
+/* ================= LOAD NOTICES ================= */
+async function loadNotices() {
+  const now = new Date().toISOString();
+
+  const { data, error } = await supabase
+    .from("notices")
+    .select("*")
+    .eq("status", "published")
+    .or(`department.eq.${department},department.eq.all`)
+    .or(`expires_at.is.null,expires_at.gt.${now}`)
+    .order("created_at", { ascending: false });
+
+  if (error) return;
+
+  localStorage.setItem("notices_cache", JSON.stringify(data));
+  render(data);
+}
+
+/* ================= RENDER ================= */
+function render(data) {
+  const list = document.getElementById("noticeList");
+  list.innerHTML = "";
+
+  data.forEach(n => {
+    if (n.is_urgent) urgentSound.play();
+
+    list.innerHTML += `
+      <div class="bg-white p-4 rounded-xl shadow relative">
+        ${n.is_urgent ? `<span class="absolute top-2 right-2 bg-red-600 text-white text-xs px-2 py-1 rounded">URGENT</span>` : ""}
+        <h3 class="font-bold">${n.title}</h3>
+        <p class="text-sm text-gray-600">${n.content}</p>
+        <p class="text-xs text-gray-400 mt-1">Dept: ${n.department}</p>
+
+        ${role === "admin" ? `
+          <div class="flex gap-2 mt-3">
+            <button onclick="del('${n.id}')" class="text-xs text-red-600">Delete</button>
+          </div>
+        ` : ""}
+      </div>
+    `;
+
+    showPush(n.title, n.content);
+  });
+
+  notifySound.play();
+}
+
+/* ================= CREATE ================= */
+document.getElementById("createBtn")?.addEventListener("click", async () => {
+  await supabase.from("notices").insert({
+    title: title.value,
+    content: content.value,
+    department: department.value,
+    is_urgent: urgent.checked,
+    expires_at: expiry.value || null,
+    created_by: currentUser.id
+  });
+
+  title.value = content.value = "";
+  urgent.checked = false;
+});
+
+/* ================= DELETE ================= */
+async function del(id) {
+  if (!confirm("Delete notice?")) return;
+  await supabase.from("notices").delete().eq("id", id);
+}
+
+/* ================= REALTIME ================= */
+function realtime() {
+  supabase.channel("notices-live")
+    .on("postgres_changes", { event: "*", schema: "public", table: "notices" }, loadNotices)
+    .subscribe();
+}
+
+/* ================= NOTIFICATIONS ================= */
+function requestNotificationPermission() {
+  if ("Notification" in window) Notification.requestPermission();
+}
+
+function showPush(title, body) {
+  if (Notification.permission === "granted") {
+    new Notification(title, { body });
+  }
+}
+
+init();
+</script>
+
+</body>
+</html>

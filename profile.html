@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>My Profile | Nexus</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded" rel="stylesheet">
+
+<style>
+.material-symbols-rounded{
+  font-variation-settings:'FILL' 1,'wght' 500,'opsz' 24;
+}
+.glass{
+  background:rgba(255,255,255,.82);
+  backdrop-filter:blur(18px);
+  box-shadow:0 25px 60px rgba(0,0,0,.12);
+}
+</style>
+</head>
+
+<body class="bg-gradient-to-br from-[#f4f6fb] to-[#edf0f8] text-slate-800">
+
+<main class="max-w-4xl mx-auto p-6 space-y-6">
+
+<!-- HEADER -->
+<div class="flex items-center justify-between">
+  <a href="student-dashboard.html" class="flex items-center gap-2 text-indigo-600 font-semibold">
+    <span class="material-symbols-rounded">arrow_back</span> Dashboard
+  </a>
+  <a href="edit-profile.html" class="bg-indigo-600 text-white px-4 py-2 rounded-xl">
+    Edit Profile
+  </a>
+</div>
+
+<!-- PROFILE CARD -->
+<div class="glass rounded-3xl p-8 text-center space-y-4 relative">
+
+  <!-- VERIFIED BADGE -->
+  <div id="verifiedBadge"
+       class="hidden absolute top-6 right-6 flex items-center gap-1 text-emerald-600 font-semibold">
+    <span class="material-symbols-rounded">verified</span> Verified
+  </div>
+
+  <img id="avatar"
+       class="h-28 w-28 mx-auto rounded-full ring-4 ring-indigo-500/30 object-cover bg-slate-200">
+
+  <h2 id="fullName" class="text-2xl font-black">—</h2>
+  <p id="email" class="text-slate-500 text-sm">—</p>
+
+  <!-- COMPLETENESS -->
+  <div class="pt-4">
+    <p class="text-xs text-slate-500 mb-1">
+      Profile completeness: <span id="percentText">0%</span>
+    </p>
+    <div class="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+      <div id="progressBar" class="bg-indigo-600 h-full w-0 transition-all"></div>
+    </div>
+  </div>
+</div>
+
+<!-- INFO GRID -->
+<div class="grid md:grid-cols-2 gap-6">
+
+<div class="glass p-6 rounded-3xl space-y-2">
+  <h3 class="font-bold mb-2">Academic Information</h3>
+  <p><b>Matric Number:</b> <span id="matric">—</span></p>
+  <p><b>Registration No:</b> <span id="reg">—</span></p>
+  <p><b>Level:</b> <span id="level">—</span></p>
+  <p><b>Department:</b> <span id="dept">—</span></p>
+</div>
+
+<div class="glass p-6 rounded-3xl space-y-2">
+  <h3 class="font-bold mb-2">Personal Information</h3>
+  <p><b>Phone:</b> <span id="phone">—</span></p>
+  <p><b>Gender:</b> <span id="gender">—</span></p>
+  <p><b>Date of Birth:</b> <span id="dob">—</span></p>
+  <p><b>Address:</b> <span id="address">—</span></p>
+</div>
+
+</div>
+
+</main>
+
+<!-- SUPABASE -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+
+<script>
+const sb = supabase.createClient(
+  "https://pymotnfhhiwugjwsbmsc.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB5bW90bmZoaGl3dWdqd3NibXNjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg0OTcyMDgsImV4cCI6MjA4NDA3MzIwOH0.-zuyCvMj0A-Vzm30q0hLgev-0z8bjgvgPokBwtnFrH0"
+);
+
+let currentUserId = null;
+
+document.addEventListener("DOMContentLoaded", init);
+
+async function init(){
+  const { data:{ user } } = await sb.auth.getUser();
+  if(!user){ location.href="login.html"; return; }
+
+  currentUserId = user.id;
+  const emailName = user.email.split("@")[0];
+
+  let { data:profile } = await sb
+    .from("profiles")
+    .select("*")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  // AUTO CREATE PROFILE
+  if(!profile){
+    await sb.from("profiles").insert({
+      id: user.id,
+      email: user.email,
+      full_name: emailName
+    });
+
+    profile = {
+      full_name: emailName,
+      email: user.email
+    };
+  }
+
+  renderProfile(profile, user.email);
+
+  // LIVE REFRESH
+  sb.channel("profile-watch")
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "profiles", filter: `id=eq.${user.id}` },
+      payload => renderProfile(payload.new, user.email)
+    )
+    .subscribe();
+}
+
+function renderProfile(profile, fallbackEmail){
+  const name = profile.full_name || fallbackEmail.split("@")[0];
+
+  fullName.textContent = name;
+  email.textContent = profile.email || fallbackEmail;
+
+  avatar.src = profile.avatar_url
+    || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=6366f1&color=fff`;
+
+  matric.textContent = profile.matric_no || "—";
+  reg.textContent = profile.reg_no || "—";
+  level.textContent = profile.level || "—";
+  dept.textContent = profile.department || "—";
+  phone.textContent = profile.phone || "—";
+  gender.textContent = profile.gender || "—";
+  dob.textContent = profile.dob || "—";
+  address.textContent = profile.address || "—";
+
+  updateCompleteness(profile);
+}
+
+function updateCompleteness(profile){
+  const fields = [
+    profile.full_name,
+    profile.avatar_url,
+    profile.matric_no,
+    profile.reg_no,
+    profile.level,
+    profile.department,
+    profile.phone,
+    profile.gender,
+    profile.dob,
+    profile.address
+  ];
+
+  const filled = fields.filter(v => v && v !== "").length;
+  const percent = Math.round((filled / fields.length) * 100);
+
+  percentText.textContent = percent + "%";
+  progressBar.style.width = percent + "%";
+
+  if(percent >= 80){
+    verifiedBadge.classList.remove("hidden");
+  }else{
+    verifiedBadge.classList.add("hidden");
+  }
+}
+</script>
+
+</body>
+</html>

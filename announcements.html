@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Announcements</title>
+
+<style>
+body{font-family:Arial;background:#eef2ff;margin:0}
+header{background:#4338ca;color:#fff;padding:15px}
+.card{background:#fff;margin:15px;padding:15px;border-radius:10px}
+</style>
+</head>
+
+<body>
+<header>📢 Announcements</header>
+<div id="list"></div>
+
+<script>
+let ann = JSON.parse(localStorage.getItem("announcements")) || [];
+let list = document.getElementById("list");
+
+if(ann.length===0){
+  list.innerHTML="<div class='card'>No announcements</div>";
+}else{
+  ann.forEach(a=>{
+    list.innerHTML+=`<div class='card'><h4>${a.title}</h4><p>${a.msg}</p></div>`;
+  });
+}
+</script>
+</body>
+</html>

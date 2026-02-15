@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Business Advisory Poster</title>
+
+    <!-- ================= CSS STYLE ================= -->
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #0a3cff, #00c6ff);
+            font-family: "Segoe UI", Arial, sans-serif;
+        }
+
+        .poster {
+            width: 420px;
+            max-width: 90%;
+            margin: 40px auto;
+            background: #ffffff;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        }
+
+        .header {
+            background: #0a3cff;
+            color: white;
+            padding: 25px;
+            text-align: center;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 26px;
+        }
+
+        .header p {
+            margin-top: 8px;
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 25px;
+            text-align: center;
+        }
+
+        .service {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .description {
+            font-size: 14px;
+            color: #555;
+            line-height: 1.6;
+        }
+
+        .location {
+            margin-top: 20px;
+            font-size: 16px;
+            color: #222;
+            background: #f2f4f8;
+            padding: 12px;
+            border-radius: 10px;
+        }
+
+        .location span {
+            color: red;
+            font-size: 20px;
+        }
+
+        .contact {
+            margin-top: 20px;
+            font-size: 16px;
+            font-weight: bold;
+            color: #0a3cff;
+        }
+
+        .footer {
+            background: #f7f7f7;
+            padding: 15px;
+            text-align: center;
+            font-size: 13px;
+            color: #666;
+        }
+
+        .btn {
+            margin-top: 18px;
+            padding: 10px 18px;
+            border: none;
+            border-radius: 25px;
+            background: #0a3cff;
+            color: white;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .btn:hover {
+            background: #0030c9;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- ================= HTML STRUCTURE ================= -->
+    <div class="poster">
+        <div class="header">
+            <h1 id="businessName">Business & Tech Advisory</h1>
+            <p id="tagline">Smart solutions for modern businesses</p>
+        </div>
+
+        <div class="content">
+            <div class="service">
+                IT • Business Consulting • Digital Support
+            </div>
+
+            <div class="description">
+                We help individuals and businesses grow by providing
+                professional technology and business advisory services.
+            </div>
+
+            <div class="location">
+                <span>📍</span>
+                <span id="locationText">Your Location Here</span>
+            </div>
+
+            <div class="contact" id="contactText">
+                Call / WhatsApp: 0800 000 0000
+            </div>
+
+            <button class="btn" onclick="changePoster()">
+                Update Poster Info
+            </button>
+        </div>
+
+        <div class="footer">
+            Trusted • Reliable • Professional
+        </div>
+    </div>
+
+    <!-- ================= JAVASCRIPT ================= -->
+    <script>
+        function changePoster() {
+            let name = prompt("Enter Business Name:");
+            let location = prompt("Enter Your Location:");
+            let contact = prompt("Enter Contact Number:");
+
+            if (name) {
+                document.getElementById("businessName").innerText = name;
+            }
+            if (location) {
+                document.getElementById("locationText").innerText = location;
+            }
+            if (contact) {
+                document.getElementById("contactText").innerText =
+                    "Call / WhatsApp: " + contact;
+            }
+        }
+    </script>
+
+</body>
+</html>

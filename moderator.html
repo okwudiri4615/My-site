@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Moderator Panel</title>
+
+<style>
+body{font-family:Arial;background:#f0fdf4;margin:0}
+header{background:#166534;color:#fff;padding:15px}
+.card{background:#fff;margin:15px;padding:15px;border-radius:10px}
+button{padding:10px;background:#166534;color:#fff;border:none;width:100%}
+input{width:100%;padding:10px;margin-top:8px}
+</style>
+</head>
+
+<body>
+<header>👥 Moderator Panel</header>
+
+<div class="card">
+<input id="a" placeholder="New activity">
+<button onclick="add()">Add Activity</button>
+</div>
+
+<script>
+let acts = JSON.parse(localStorage.getItem("activities")) || [];
+
+function add(){
+  acts.push(a.value);
+  localStorage.setItem("activities",JSON.stringify(acts));
+  alert("Activity added");
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Student Registration</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+
+body{
+  min-height:100vh;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  background:linear-gradient(135deg,#020617,#1e3a8a);
+  font-family:system-ui,-apple-system,Segoe UI,Roboto;
+  padding:16px;
+}
+
+.card{
+  background:#fff;
+  width:100%;
+  max-width:420px;
+  padding:28px;
+  border-radius:20px;
+  box-shadow:0 30px 70px rgba(0,0,0,.35);
+}
+
+h2{text-align:center;margin-bottom:6px}
+.sub{text-align:center;font-size:14px;color:#555;margin-bottom:20px}
+
+.field{margin-top:14px}
+label{font-size:13px;font-weight:500;margin-bottom:6px;display:block}
+
+input{
+  width:100%;
+  padding:14px;
+  border-radius:12px;
+  border:1px solid #ccc;
+  font-size:14px;
+}
+
+.password-wrap{position:relative}
+.eye{
+  position:absolute;
+  right:14px;
+  top:50%;
+  transform:translateY(-50%);
+  cursor:pointer;
+  font-size:15px;
+  opacity:.6;
+}
+
+button{
+  width:100%;
+  margin-top:22px;
+  padding:15px;
+  background:#1e40af;
+  color:#fff;
+  border:none;
+  border-radius:14px;
+  font-weight:600;
+  cursor:pointer;
+}
+
+button:disabled{opacity:.7}
+
+.footer{
+  text-align:center;
+  margin-top:16px;
+  font-size:14px;
+}
+
+.footer a{
+  color:#1e40af;
+  text-decoration:none;
+  font-weight:600;
+}
+
+.toast{
+  position:fixed;
+  bottom:20px;
+  left:50%;
+  transform:translateX(-50%);
+  padding:14px 22px;
+  border-radius:12px;
+  color:#fff;
+  font-size:14px;
+  opacity:0;
+  transition:.3s;
+}
+.toast.show{opacity:1}
+.toast.success{background:#166534}
+.toast.error{background:#991b1b}
+</style>
+</head>
+
+<body>
+
+<div class="card">
+  <h2>🎓 Student Registration</h2>
+  <div class="sub">Create your student account</div>
+
+  <form id="registerForm">
+
+    <div class="field">
+      <label>Email Address</label>
+      <input id="email" type="email" required>
+    </div>
+
+    <div class="field password-wrap">
+      <label>Password</label>
+      <input id="password" type="password" required>
+      <span class="eye" id="eye">👁️</span>
+    </div>
+
+    <button type="submit">Create Account</button>
+  </form>
+
+  <div class="footer">
+    Already registered? <a href="login.html">Login</a>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script>
+/* ========= SUPABASE INIT (SAFE) ========= */
+const SUPABASE_URL = "https://pymotnfhhiwugjwsbmsc.supabase.co";
+const SUPABASE_KEY = "sb_publishable_n_2rHMCTfzRr8uKnKvJUgg_gcZBKymu";
+
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+/* ========= UI ========= */
+const toast = document.getElementById("toast");
+const form = document.getElementById("registerForm");
+const passwordInput = document.getElementById("password");
+const eye = document.getElementById("eye");
+
+function showToast(msg,type){
+  toast.textContent = msg;
+  toast.className = `toast show ${type}`;
+  setTimeout(()=>toast.className="toast",3000);
+}
+
+eye.onclick = ()=>{
+  passwordInput.type =
+    passwordInput.type === "password" ? "text" : "password";
+};
+
+/* ========= REGISTER ========= */
+form.addEventListener("submit", async (e)=>{
+  e.preventDefault();
+
+  const email = document.getElementById("email").value.trim();
+  const password = passwordInput.value;
+
+  if(!email || !password){
+    showToast("Fill all fields","error");
+    return;
+  }
+
+  const { error } = await sb.auth.signUp({
+    email,
+    password
+  });
+
+  if(error){
+    showToast(error.message,"error");
+    return;
+  }
+
+  showToast("Registration successful 🎉","success");
+
+  setTimeout(()=>{
+    window.location.href = "login.html";
+  },1500);
+});
+</script>
+
+</body>
+</html>

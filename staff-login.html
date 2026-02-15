@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Staff Login</title>
+
+<style>
+body{
+  font-family:Arial;
+  background:#f0fdf4;
+  padding:30px;
+}
+.card{
+  background:#fff;
+  padding:20px;
+  border-radius:10px;
+}
+input,button{
+  width:100%;
+  padding:10px;
+  margin-top:10px;
+}
+button{
+  background:#166534;
+  color:#fff;
+  border:none;
+}
+</style>
+</head>
+
+<body>
+
+<div class="card">
+  <h2>Staff Login</h2>
+  <input id="email" placeholder="Email">
+  <input id="password" type="password" placeholder="Password">
+  <button id="loginBtn">Login</button>
+</div>
+
+<!-- 1️⃣ Load Supabase FIRST -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<!-- 2️⃣ Your app logic -->
+<script>
+/* === SUPABASE CONFIG === */
+const SUPABASE_URL = "https://pymotnfhhiwugjwsbmsc.supabase.co";
+const SUPABASE_KEY = "sb_publishable_n_2rHMCTfzRr8uKnKvJUgg_gcZBKymu";
+
+/* ✅ Use a DIFFERENT variable name */
+const supabaseClient = supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_KEY
+);
+
+/* === LOGIN FUNCTION === */
+async function login(){
+  const emailVal = document.getElementById("email").value;
+  const passVal = document.getElementById("password").value;
+
+  const { data, error } = await supabaseClient.auth.signInWithPassword({
+    email: emailVal,
+    password: passVal
+  });
+
+  if(error){
+    alert(error.message);
+    return;
+  }
+
+  const { data: profile, error: profileError } =
+    await supabaseClient
+      .from("profiles")
+      .select("role")
+      .eq("id", data.user.id)
+      .single();
+
+  if(profileError){
+    alert("Profile error");
+    return;
+  }
+
+  if(profile.role === "admin"){
+    location.href = "admin.html";
+  }else if(profile.role === "moderator"){
+    location.href = "moderator.html";
+  }else{
+    alert("Access denied");
+  }
+}
+
+/* === BUTTON EVENT (SAFER THAN onclick) === */
+document
+  .getElementById("loginBtn")
+  .addEventListener("click", login);
+</script>
+
+</body>
+</html>

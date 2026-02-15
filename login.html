@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Student Login</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+
+body{
+  min-height:100vh;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  background:linear-gradient(135deg,#020617,#1e3a8a);
+  font-family:system-ui,-apple-system,Segoe UI,Roboto;
+  padding:16px;
+}
+
+.card{
+  background:#fff;
+  width:100%;
+  max-width:380px;
+  padding:26px;
+  border-radius:18px;
+  box-shadow:0 25px 60px rgba(0,0,0,.35);
+}
+
+h2{text-align:center;margin-bottom:6px}
+.sub{text-align:center;font-size:14px;color:#555;margin-bottom:18px}
+
+.field{margin-top:14px}
+label{font-size:13px;font-weight:500;margin-bottom:6px;display:block}
+
+input{
+  width:100%;
+  padding:14px;
+  border-radius:12px;
+  border:1px solid #ccc;
+  font-size:14px;
+}
+
+.password-wrap{position:relative}
+.eye{
+  position:absolute;
+  right:14px;
+  top:50%;
+  transform:translateY(-50%);
+  cursor:pointer;
+  font-size:16px;
+  opacity:.6;
+}
+
+button{
+  width:100%;
+  margin-top:22px;
+  padding:15px;
+  background:#1e40af;
+  color:#fff;
+  border:none;
+  border-radius:14px;
+  font-weight:600;
+  cursor:pointer;
+}
+
+button:disabled{opacity:.7}
+
+.links{
+  margin-top:14px;
+  display:flex;
+  justify-content:space-between;
+  font-size:13px;
+}
+
+.links a{
+  color:#1e40af;
+  text-decoration:none;
+  font-weight:500;
+}
+
+.toast{
+  position:fixed;
+  bottom:20px;
+  left:50%;
+  transform:translateX(-50%);
+  padding:14px 22px;
+  border-radius:12px;
+  color:#fff;
+  font-size:14px;
+  opacity:0;
+  transition:.3s;
+}
+.toast.show{opacity:1}
+.toast.success{background:#166534}
+.toast.error{background:#991b1b}
+</style>
+</head>
+
+<body>
+
+<div class="card">
+  <h2>🎓 Student Login</h2>
+  <div class="sub">Login to your dashboard</div>
+
+  <form id="loginForm">
+
+    <div class="field">
+      <label>Email Address</label>
+      <input id="email" type="email" placeholder="example@email.com" required>
+    </div>
+
+    <div class="field password-wrap">
+      <label>Password</label>
+      <input id="password" type="password" required>
+      <span class="eye" id="eye">👁️</span>
+    </div>
+
+    <button type="submit">Login</button>
+
+  </form>
+
+  <div class="links">
+    <a href="#" id="forgot">Forgot password?</a>
+    <a href="student-register.html">Create account</a>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script>
+/* ===== SUPABASE (SAFE INIT) ===== */
+const SUPABASE_URL = "https://pymotnfhhiwugjwsbmsc.supabase.co";
+const SUPABASE_KEY = "sb_publishable_n_2rHMCTfzRr8uKnKvJUgg_gcZBKymu";
+
+const db = window.supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_KEY
+);
+
+/* ===== UI ===== */
+const form = document.getElementById("loginForm");
+const toast = document.getElementById("toast");
+const eye = document.getElementById("eye");
+const passwordInput = document.getElementById("password");
+
+function showToast(msg,type){
+  toast.textContent = msg;
+  toast.className = `toast show ${type}`;
+  setTimeout(()=>toast.className="toast",2500);
+}
+
+/* 👁️ Toggle Password */
+eye.addEventListener("click", ()=>{
+  passwordInput.type =
+    passwordInput.type === "password" ? "text" : "password";
+});
+
+/* ===== LOGIN ===== */
+form.addEventListener("submit", async (e)=>{
+  e.preventDefault();
+
+  const email = document.getElementById("email").value.trim();
+  const password = passwordInput.value;
+
+  if(!email || !password){
+    showToast("Fill all fields","error");
+    return;
+  }
+
+  const { error } = await db.auth.signInWithPassword({
+    email,
+    password
+  });
+
+  if(error){
+    showToast(error.message,"error");
+    return;
+  }
+
+  // 🚀 INSTANT REDIRECT
+  window.location.replace("student-dashboard.html");
+});
+
+/* ===== FORGOT PASSWORD ===== */
+document.getElementById("forgot").addEventListener("click", async (e)=>{
+  e.preventDefault();
+
+  const email = document.getElementById("email").value.trim();
+  if(!email){
+    showToast("Enter your email first","error");
+    return;
+  }
+
+  const { error } = await db.auth.resetPasswordForEmail(email);
+
+  if(error){
+    showToast(error.message,"error");
+    return;
+  }
+
+  showToast("Password reset email sent 📧","success");
+});
+</script>
+
+</body>
+</html>
