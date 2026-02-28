@@ -9,6 +9,9 @@
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded" rel="stylesheet">
 
 <style>
+/* CLOAK: Hide the UI until authentication is confirmed */
+[v-cloak] { display: none !important; }
+
 .material-symbols-rounded {
   font-variation-settings: 'FILL' 1,'wght' 500,'GRAD' 0,'opsz' 24;
 }
@@ -37,14 +40,22 @@
 @keyframes shimmer {
   to { background-position:-200% 0 }
 }
+
+.dark body {
+  background: linear-gradient(to bottom right,#111827,#1f2937);
+  color: #e5e7eb;
+}
+
+.dark .bg-white {
+  background:#1f2937 !important;
+}
 </style>
 </head>
 
-<body class="bg-gradient-to-br from-[#f4f6fb] to-[#edf0f8] text-slate-800 transition-colors duration-300">
+<body v-cloak class="bg-gradient-to-br from-[#f4f6fb] to-[#edf0f8] text-slate-800 transition-colors duration-300">
 
 <div class="flex min-h-screen">
 
-<!-- SIDEBAR -->
 <aside id="sidebar" class="fixed lg:static z-40 w-64 -translate-x-full lg:translate-x-0 bg-white/90 border-r transition-all">
   <div class="p-6 flex items-center gap-3">
     <div class="h-10 w-10 bg-indigo-600 text-white font-black rounded-xl flex items-center justify-center">CS</div>
@@ -61,6 +72,9 @@
     <a href="notice.html" class="flex items-center gap-3 p-3 hover:bg-slate-100 rounded-xl">
       <span class="material-symbols-rounded">campaign</span> Notices
     </a>
+    <a href="courses.html" class="flex items-center gap-3 p-3 hover:bg-slate-100 rounded-xl">
+      <span class="material-symbols-rounded">menu_book</span> Courses
+    </a>
     <a href="profile.html" class="flex items-center gap-3 p-3 hover:bg-slate-100 rounded-xl">
       <span class="material-symbols-rounded">person</span> Profile
     </a>
@@ -72,7 +86,6 @@
 
 <div id="overlay" onclick="toggleMenu()" class="hidden fixed inset-0 bg-black/40 z-30"></div>
 
-<!-- MAIN -->
 <main class="flex-grow lg:ml-64">
 
 <header class="sticky top-0 z-20 bg-white/70 backdrop-blur border-b px-6 h-20 flex justify-between items-center">
@@ -91,8 +104,7 @@
 
 <section class="p-8 max-w-7xl mx-auto space-y-8">
 
-<!-- STATS -->
-<div class="grid md:grid-cols-2 gap-6 fade-up">
+<div class="grid md:grid-cols-3 gap-6 fade-up">
   <div class="glass p-6 rounded-3xl">
     <p class="text-sm text-slate-500">New Notices</p>
     <p id="noticeCount" class="text-4xl font-black skeleton w-16 h-10 rounded"></p>
@@ -101,11 +113,13 @@
     <p class="text-sm text-slate-500">Classes Today</p>
     <p id="classCount" class="text-4xl font-black skeleton w-16 h-10 rounded"></p>
   </div>
+  <div class="glass p-6 rounded-3xl">
+    <p class="text-sm text-slate-500">Total Courses</p>
+    <p id="courseCount" class="text-4xl font-black skeleton w-16 h-10 rounded"></p>
+  </div>
 </div>
 
-<!-- PREVIEWS -->
-<div class="grid md:grid-cols-2 gap-6">
-
+<div class="grid md:grid-cols-3 gap-6">
   <div class="glass p-6 rounded-3xl fade-up">
     <div class="flex justify-between mb-4">
       <h3 class="font-black">Recent Notices</h3>
@@ -122,13 +136,19 @@
     <div id="classPreview" class="space-y-3"></div>
   </div>
 
+  <div class="glass p-6 rounded-3xl fade-up">
+    <div class="flex justify-between mb-4">
+      <h3 class="font-black">Available Courses</h3>
+      <a href="courses.html" class="text-indigo-600 text-sm">View →</a>
+    </div>
+    <div id="coursePreview" class="space-y-3"></div>
+  </div>
 </div>
 
 </section>
 </main>
 </div>
 
-<!-- SUPABASE -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 
 <script>
@@ -137,93 +157,107 @@ const sb = supabase.createClient(
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB5bW90bmZoaGl3dWdqd3NibXNjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg0OTcyMDgsImV4cCI6MjA4NDA3MzIwOH0.-zuyCvMj0A-Vzm30q0hLgev-0z8bjgvgPokBwtnFrH0"
 );
 
-/* THEME */
-const root = document.documentElement;
-if(localStorage.theme==="dark") root.classList.add("dark");
-function toggleTheme(){
-  root.classList.toggle("dark");
-  localStorage.theme = root.classList.contains("dark")?"dark":"light";
-}
-
-/* MENU */
-function toggleMenu(){
-  sidebar.classList.toggle("-translate-x-full");
-  overlay.classList.toggle("hidden");
-}
-
-document.addEventListener("DOMContentLoaded", init);
-
 async function init(){
-  const { data:{ user } } = await sb.auth.getUser();
-  if(!user){ location.href="login.html"; return; }
+  const { data: { session }, error } = await sb.auth.getSession();
+  
+  if(!session || error) {
+    window.location.replace("login.html");
+    return;
+  }
 
+  document.body.removeAttribute('v-cloak');
+  const user = session.user;
   const emailName = user.email.split("@")[0].replace(/[._]/g," ");
   const fallbackName = emailName.charAt(0).toUpperCase()+emailName.slice(1);
 
-  let { data:profile } = await sb
-    .from("profiles")
-    .select("*")
-    .eq("id", user.id)
-    .maybeSingle();
+  let { data:profile } = await sb.from("profiles").select("*").eq("id", user.id).maybeSingle();
 
-  /* AUTO CREATE PROFILE */
   if(!profile){
-    await sb.from("profiles").insert({
-      id: user.id,
-      full_name: fallbackName,
-      email: user.email
-    });
-    profile = { full_name:fallbackName };
+    const { data: newProfile } = await sb.from("profiles").insert({
+      id:user.id,
+      full_name:fallbackName,
+      email:user.email
+    }).select().single();
+    profile = newProfile;
   }
 
-  welcomeText.textContent = `Welcome, ${profile.full_name}`;
+  welcomeText.textContent=`Welcome, ${profile.full_name || fallbackName}`;
   welcomeText.classList.remove("skeleton");
-
-  avatarImg.src =
-    profile.avatar_url ||
-    `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.full_name)}&background=6366f1&color=fff`;
+  avatarImg.src=profile.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.full_name || fallbackName)}&background=6366f1&color=fff`;
   avatarImg.classList.remove("skeleton");
 
   loadNotices();
   loadTodayClasses(profile.level);
+  loadCourses(profile.level);
+  subscribeRealtime();
 }
 
-/* NOTICES */
-async function loadNotices(){
-  const { data=[] } = await sb.from("notices").select("title,created_at").order("created_at",{ascending:false});
-  noticeCount.textContent = data.length;
-  noticeCount.classList.remove("skeleton");
-
-  noticePreview.innerHTML = data.slice(0,3).map(n=>`
-    <div class="bg-white p-3 rounded-xl shadow">
-      <p class="font-bold">${n.title}</p>
-      <p class="text-xs text-slate-400">${new Date(n.created_at).toDateString()}</p>
-    </div>
-  `).join("") || "<p class='text-slate-400'>No notices</p>";
+if(localStorage.theme==="dark") document.documentElement.classList.add("dark");
+function toggleTheme(){
+  document.documentElement.classList.toggle("dark");
+  localStorage.theme = document.documentElement.classList.contains("dark")?"dark":"light";
 }
-
-/* CLASSES */
-async function loadTodayClasses(level){
-  const today = new Date().toLocaleDateString("en-US",{weekday:"long"});
-  let q = sb.from("timetable").select("course,time,venue").eq("day",today);
-  if(level) q = q.eq("level",level);
-  const { data=[] } = await q;
-
-  classCount.textContent = data.length;
-  classCount.classList.remove("skeleton");
-
-  classPreview.innerHTML = data.map(c=>`
-    <div class="bg-white p-3 rounded-xl shadow">
-      <p class="font-bold">${c.course}</p>
-      <p class="text-xs text-slate-400">${c.time} • ${c.venue}</p>
-    </div>
-  `).join("") || "<p class='text-slate-400'>No classes today 🎉</p>";
+function toggleMenu(){
+  document.getElementById('sidebar').classList.toggle("-translate-x-full");
+  document.getElementById('overlay').classList.toggle("hidden");
 }
-
 async function logout(){
   await sb.auth.signOut();
-  location.href="login.html";
+  window.location.replace("login.html");
 }
+
+async function loadNotices(){
+  const today=new Date().toISOString();
+  const { data=[] }=await sb.from("notices").select("*").order("created_at",{ascending:false});
+  const active=data.filter(n=>!n.expiry_date || n.expiry_date>today);
+  noticeCount.textContent=active.length;
+  noticeCount.classList.remove("skeleton");
+  renderNotices(active);
+}
+
+function renderNotices(items){
+  noticePreview.innerHTML=items.slice(0,3).map(n=>{
+    const badge = n.status === "Urgent" ? "bg-red-100 text-red-600" : "bg-blue-100 text-blue-600";
+    return `<div class="bg-white/50 p-3 rounded-xl border border-slate-100"><div class="flex justify-between items-center"><p class="font-bold text-sm">${n.title}</p><span class="text-[10px] px-2 py-0.5 rounded-full ${badge}">${n.status||'Info'}</span></div></div>`;
+  }).join("") || "<p class='text-xs text-slate-400'>No recent notices</p>";
+}
+
+async function loadTodayClasses(level){
+  const today=new Date().toLocaleDateString("en-US",{weekday:"long"});
+  let q=sb.from("timetable").select("*").eq("day",today);
+  if(level) q=q.eq("level",level);
+  const { data=[] }=await q;
+  classCount.textContent=data.length;
+  classCount.classList.remove("skeleton");
+  classPreview.innerHTML=data.map(c=>`<div class="bg-white/50 p-3 rounded-xl border border-slate-100"><p class="font-bold text-sm">${c.course}</p><p class="text-[10px] text-slate-400">${c.time}</p></div>`).join("") || "None";
+}
+
+async function loadCourses(level){
+  let q=sb.from("courses").select("*");
+  if(level) q=q.eq("level",level);
+  const { data=[] }=await q;
+  courseCount.textContent=data.length;
+  courseCount.classList.remove("skeleton");
+  coursePreview.innerHTML=data.slice(0,3).map(c=>`<div class="bg-white/50 p-3 rounded-xl border border-slate-100"><p class="font-bold text-sm">${c.course_code}</p></div>`).join("") || "None";
+}
+
+function subscribeRealtime(){
+  sb.channel("dashboard-updates").on("postgres_changes",{event:"*",schema:"public",table:"notices"},loadNotices).subscribe();
+}
+
+init();
+</script>
+
+<script type="text/javascript">
+var Tawk_API=Tawk_API||{}, Tawk_LoadStart=new Date();
+(function(){
+var s1=document.createElement("script"),s0=document.getElementsByTagName("script")[0];
+s1.async=true;
+s1.src='https://embed.tawk.to/69a3315faec81f1c3ec3ff3c/default';
+s1.charset='UTF-8';
+s1.setAttribute('crossorigin','*');
+s0.parentNode.insertBefore(s1,s0);
+})();
 </script>
 
 </body>

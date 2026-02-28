@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>All Courses</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+
+<body class="bg-gray-50">
+
+<div class="max-w-7xl mx-auto p-8">
+
+<h1 class="text-3xl font-black mb-6">Computer Science Courses</h1>
+
+<!-- STATISTICS -->
+<div class="grid grid-cols-3 gap-6 mb-8">
+  <div class="bg-white p-6 rounded-xl shadow">
+    <p class="text-gray-500 text-sm">Total Courses</p>
+    <p id="totalCourses" class="text-3xl font-black">0</p>
+  </div>
+
+  <div class="bg-white p-6 rounded-xl shadow">
+    <p class="text-gray-500 text-sm">ND Courses</p>
+    <p id="ndCourses" class="text-3xl font-black">0</p>
+  </div>
+
+  <div class="bg-white p-6 rounded-xl shadow">
+    <p class="text-gray-500 text-sm">HND Courses</p>
+    <p id="hndCourses" class="text-3xl font-black">0</p>
+  </div>
+</div>
+
+<!-- COURSE GRID -->
+<div id="courseGrid" class="grid md:grid-cols-3 gap-6"></div>
+
+</div>
+
+<!-- COURSE MODAL -->
+<div id="courseModal" class="fixed inset-0 bg-black/40 hidden flex items-center justify-center">
+  <div class="bg-white w-full max-w-lg p-8 rounded-xl">
+    <h2 id="modalTitle" class="text-xl font-black mb-4"></h2>
+    <p id="modalLevel" class="text-sm text-gray-500 mb-2"></p>
+    <p id="modalUnits" class="text-sm text-gray-500 mb-6"></p>
+
+    <a id="outlineBtn"
+       target="_blank"
+       class="bg-indigo-600 text-white px-6 py-3 rounded-lg inline-block">
+       Download Course Outline
+    </a>
+
+    <button onclick="closeModal()"
+            class="ml-4 text-red-600 font-semibold">
+      Close
+    </button>
+  </div>
+</div>
+
+<script>
+const sb = supabase.createClient(
+  "https://pymotnfhhiwugjwsbmsc.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB5bW90bmZoaGl3dWdqd3NibXNjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg0OTcyMDgsImV4cCI6MjA4NDA3MzIwOH0.-zuyCvMj0A-Vzm30q0hLgev-0z8bjgvgPokBwtnFrH0"
+);
+
+let userLevel = null;
+
+document.addEventListener("DOMContentLoaded", init);
+
+async function init(){
+  const { data:{ user } } = await sb.auth.getUser();
+  if(!user) return;
+
+  const { data:profile } = await sb
+    .from("profiles")
+    .select("level")
+    .eq("id", user.id)
+    .single();
+
+  userLevel = profile?.level || null;
+
+  loadCourses();
+}
+
+async function loadCourses(){
+  let query = sb.from("courses").select("*");
+
+  // Visibility per level
+  if(userLevel){
+    query = query.eq("level", userLevel);
+  }
+
+  const { data=[], error } = await query;
+
+  if(error){
+    console.error(error);
+    courseGrid.innerHTML =
+      "<p class='text-red-500'>Cannot fetch courses</p>";
+    return;
+  }
+
+  renderStatistics(data);
+  renderCourses(data);
+}
+
+function renderStatistics(data){
+  totalCourses.textContent = data.length;
+  ndCourses.textContent =
+    data.filter(c=>c.level?.includes("ND")).length;
+  hndCourses.textContent =
+    data.filter(c=>c.level?.includes("HND")).length;
+}
+
+function renderCourses(data){
+  if(data.length===0){
+    courseGrid.innerHTML =
+      "<p class='text-gray-400'>No courses available</p>";
+    return;
+  }
+
+  courseGrid.innerHTML = data.map(c=>`
+    <div class="bg-white p-6 rounded-xl shadow hover:shadow-lg transition">
+      <h3 class="font-black text-lg">${c.course_code}</h3>
+      <p class="text-sm text-gray-500 mb-2">${c.course_title}</p>
+      <p class="text-xs text-indigo-600 mb-4">${c.level}</p>
+
+      <button onclick='openModal(${JSON.stringify(c)})'
+        class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm">
+        View Details
+      </button>
+    </div>
+  `).join("");
+}
+
+function openModal(course){
+  modalTitle.textContent =
+    course.course_code + " - " + course.course_title;
+
+  modalLevel.textContent =
+    "Level: " + (course.level || "N/A");
+
+  modalUnits.textContent =
+    "Units: " + (course.units || "N/A");
+
+  // If outline_url exists, use it
+  if(course.outline_url){
+    outlineBtn.href = course.outline_url;
+  } else {
+    // fallback Google location
+    outlineBtn.href =
+      "https://www.google.com/search?q=" +
+      encodeURIComponent(course.course_code + " course outline pdf");
+  }
+
+  courseModal.classList.remove("hidden");
+}
+
+function closeModal(){
+  courseModal.classList.add("hidden");
+}
+</script>
+
+</body>
+</html>
