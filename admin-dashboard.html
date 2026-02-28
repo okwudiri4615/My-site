@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Enterprise Admin</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+    :root{ --bg:#0f172a; --card:#1e293b; --text:#ffffff; --border:#334155; }
+    .light{ --bg:#f1f5f9; --card:#ffffff; --text:#0f172a; --border:#cbd5e1; }
+    
+    /* Cloak the body until authenticated */
+    body { visibility: hidden; margin:0; font-family:'Segoe UI', sans-serif; display:flex; height:100vh; background:var(--bg); color:var(--text); transition: 0.3s; }
+    
+    .sidebar{ width:250px; background:#111827; padding:20px; box-shadow: 2px 0 5px rgba(0,0,0,0.2); }
+    .sidebar h2 { color: #3b82f6; margin-bottom: 30px; }
+    .sidebar button{ width:100%; margin-bottom:10px; padding:12px; border:none; background:#1e293b; color:white; border-radius:6px; cursor:pointer; text-align: left; transition: 0.2s; }
+    .sidebar button:hover { background: #2563eb; }
+    .main{ flex:1; padding:20px; overflow:auto; }
+    .card{ background:var(--card); padding:20px; border-radius:12px; margin-bottom:20px; border: 1px solid var(--border); }
+    table{ width:100%; border-collapse:collapse; margin-top:15px; }
+    th,td{ padding:12px; border-bottom:1px solid var(--border); text-align: left; }
+    input,select{ width:90%; padding:8px; background:rgba(0,0,0,0.1); color:var(--text); border:1px solid var(--border); border-radius:4px; }
+    .action{ padding:6px 12px; margin-right:5px; border:none; border-radius:4px; cursor:pointer; color:white; font-size: 12px; }
+    .edit{background:#3b82f6} .save{background:#10b981} .delete{background:#ef4444}
+    .add-btn{ background:#10b981; padding:10px 16px; border:none; border-radius:6px; cursor:pointer; margin-bottom:15px; color:white; font-weight: bold; }
+    .toggle{ position:fixed; top:15px; right:20px; cursor:pointer; font-size:20px; background: var(--card); padding: 8px; border-radius: 50%; border: 1px solid var(--border); }
+</style>
+</head>
+<body>
+
+<div class="sidebar">
+    <h2 id="user-display">Admin</h2>
+    <button onclick="loadTable('profiles')">👤 Users</button>
+    <button onclick="loadTable('notices')">🔔 Notices</button>
+    <button onclick="loadTable('courses')">📚 Courses</button>
+    <button onclick="loadTable('timetable')">📅 Timetable</button>
+    <button onclick="logout()" style="margin-top: 20px; background: #334155;">🚪 Logout</button>
+</div>
+
+<div class="main">
+    <div id="content">Loading dashboard...</div>
+</div>
+
+<div class="toggle" onclick="toggleTheme()">🌓</div>
+
+<script>
+const SUPABASE_URL="https://pymotnfhhiwugjwsbmsc.supabase.co";
+const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB5bW90bmZoaGl3dWdqd3NibXNjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg0OTcyMDgsImV4cCI6MjA4NDA3MzIwOH0.-zuyCvMj0A-Vzm30q0hLgev-0z8bjgvgPokBwtnFrH0";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let currentTable = null;
+let currentColumns = [];
+
+async function init(){
+    // 1. Get current session
+    const { data: { session }, error: sessionError } = await sb.auth.getSession();
+    
+    // 2. If no session, force redirect to login
+    if (!session || sessionError) {
+        console.log("No active session found.");
+        window.location.replace("login.html"); 
+        return;
+    }
+
+    // 3. Authenticated! Show the body and load the first table
+    document.body.style.visibility = "visible";
+    document.getElementById("user-display").innerText = session.user.email.split('@')[0].toUpperCase();
+    loadTable("profiles");
+}
+
+// Start auth check immediately
+init();
+
+function toggleTheme(){ document.body.classList.toggle("light"); }
+
+async function loadTable(table){
+    currentTable = table;
+    document.getElementById("content").innerHTML = "Refreshing data...";
+    
+    // Safety check: ensure we still have a session before API call
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) { window.location.replace("login.html"); return; }
+
+    const {data, error} = await sb.from(table).select("*").order('id', { ascending: true });
+    
+    if(error) {
+        document.getElementById("content").innerHTML = `
+            <div class="card">
+                <h3>Access Denied</h3>
+                <p>${error.message}</p>
+                <p><small>Check if RLS policies allow "Select" for your user role.</small></p>
+            </div>`;
+        return;
+    }
+
+    if(data.length > 0) {
+        currentColumns = Object.keys(data[0]).filter(c => !["id", "created_at"].includes(c));
+    } else {
+        if(table === 'notices') currentColumns = ['title', 'content', 'status'];
+        else if(table === 'profiles') currentColumns = ['username', 'full_name', 'role'];
+        else currentColumns = ['name', 'description'];
+    }
+
+    renderTable(data);
+}
+
+function renderTable(data){
+    let html = `<div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h2>${currentTable.toUpperCase()}</h2>
+        <button class="add-btn" onclick="addRow()">+ Add New Entry</button>
+    </div>
+    <table><thead><tr>`;
+
+    currentColumns.forEach(c => html += `<th>${c.replace('_', ' ')}</th>`);
+    html += `<th>Actions</th></tr></thead><tbody>`;
+
+    data.forEach(row => {
+        html += `<tr id="row-${row.id}">`;
+        currentColumns.forEach(col => {
+            const val = row[col] ?? "";
+            html += `<td>
+                <span class="view-mode">${val}</span>
+                ${renderInput(col, val, true)}
+            </td>`;
+        });
+        html += `<td>
+            <button class="action edit" onclick="enableEdit('${row.id}')">Edit</button>
+            <button class="action save" style="display:none" onclick="saveRow('${row.id}')">Save</button>
+            <button class="action delete" onclick="deleteRow('${row.id}')">Delete</button>
+        </td></tr>`;
+    });
+
+    html += `</tbody></table></div>`;
+    document.getElementById("content").innerHTML = html;
+}
+
+function renderInput(col, val, hidden) {
+    const display = hidden ? 'style="display:none"' : '';
+    if (col === "status") {
+        return `<select class="edit-mode" data-col="${col}" ${display}>
+            <option value="normal" ${val==="normal"?"selected":""}>Normal</option>
+            <option value="important" ${val==="important"?"selected":""}>Important</option>
+            <option value="urgent" ${val==="urgent"?"selected":""}>Urgent</option>
+        </select>`;
+    }
+    return `<input class="edit-mode" data-col="${col}" value="${val}" ${display}>`;
+}
+
+function addRow(){
+    if(document.getElementById("newRow")) return;
+    const tbody = document.querySelector("tbody");
+    let html = `<tr id="newRow">`;
+    currentColumns.forEach(col => { html += `<td>${renderInput(col, "", false)}</td>`; });
+    html += `<td>
+        <button class="action save" onclick="insertRow()">Create</button>
+        <button class="action delete" onclick="loadTable(currentTable)">Cancel</button>
+    </td></tr>`;
+    tbody.insertAdjacentHTML("afterbegin", html);
+}
+
+function enableEdit(id){
+    const row = document.getElementById(`row-${id}`);
+    row.querySelectorAll(".view-mode").forEach(e => e.style.display="none");
+    row.querySelectorAll(".edit-mode").forEach(e => e.style.display="block");
+    row.querySelector(".edit").style.display="none";
+    row.querySelector(".save").style.display="inline-block";
+}
+
+async function saveRow(id){
+    const row = document.getElementById(`row-${id}`);
+    const inputs = row.querySelectorAll(".edit-mode");
+    let updateData = {};
+    inputs.forEach(input => { updateData[input.getAttribute('data-col')] = input.value; });
+
+    const { error } = await sb.from(currentTable).update(updateData).eq("id", id);
+    if(error) alert("Update failed: " + error.message);
+    else loadTable(currentTable);
+}
+
+async function insertRow(){
+    const row = document.getElementById("newRow");
+    const inputs = row.querySelectorAll(".edit-mode");
+    let insertData = {};
+    inputs.forEach(input => { insertData[input.getAttribute('data-col')] = input.value; });
+
+    const { error } = await sb.from(currentTable).insert([insertData]);
+    if(error) alert("Insert failed: " + error.message);
+    else loadTable(currentTable);
+}
+
+async function deleteRow(id){
+    if(!confirm("Are you sure?")) return;
+    const { error } = await sb.from(currentTable).delete().eq("id", id);
+    if(error) alert("Delete failed: " + error.message);
+    else loadTable(currentTable);
+}
+
+async function logout(){
+    const { error } = await sb.auth.signOut();
+    window.location.replace("login.html");
+}
+</script>
+</body>
+</html>
