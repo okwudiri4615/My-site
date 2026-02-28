@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Login</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+
+body{
+  height:100vh;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  font-family:Segoe UI, sans-serif;
+  background:linear-gradient(135deg,#0f172a,#1e3a8a,#2563eb);
+}
+
+.card{
+  width:380px;
+  background:white;
+  padding:35px;
+  border-radius:18px;
+  box-shadow:0 25px 60px rgba(0,0,0,0.35);
+}
+
+h2{
+  text-align:center;
+  margin-bottom:25px;
+  color:#1e3a8a;
+}
+
+.input-group{
+  margin-bottom:18px;
+  position:relative;
+}
+
+input{
+  width:100%;
+  padding:12px 45px 12px 12px;
+  border-radius:8px;
+  border:1px solid #ddd;
+  font-size:14px;
+}
+
+.eye-btn{
+  position:absolute;
+  right:12px;
+  top:10px;
+  background:none;
+  border:none;
+  cursor:pointer;
+  font-size:18px;
+}
+
+.login-btn{
+  width:100%;
+  padding:12px;
+  border:none;
+  border-radius:10px;
+  background:#2563eb;
+  color:white;
+  font-weight:bold;
+  cursor:pointer;
+}
+
+.login-btn:hover{
+  background:#1d4ed8;
+}
+
+/* Toast */
+.toast{
+  position:fixed;
+  top:20px;
+  right:20px;
+  padding:14px 22px;
+  border-radius:10px;
+  color:white;
+  font-size:14px;
+  opacity:0;
+  transform:translateX(120%);
+  transition:0.4s;
+}
+
+.toast.show{
+  opacity:1;
+  transform:translateX(0);
+}
+
+.success{background:#16a34a}
+.error{background:#dc2626}
+.info{background:#2563eb}
+</style>
+</head>
+
+<body>
+
+<div class="card">
+  <h2>Admin Panel Login</h2>
+
+  <div class="input-group">
+    <input type="email" id="email" placeholder="Enter Email">
+  </div>
+
+  <div class="input-group">
+    <input type="password" id="password" placeholder="Enter Password">
+    <button type="button" class="eye-btn" id="togglePassword">👁</button>
+  </div>
+
+  <button class="login-btn" onclick="login()">Login</button>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+
+/* ===============================
+   SUPABASE CONFIG
+================================ */
+
+const SUPABASE_URL = "https://pymotnfhhiwugjwsbmsc.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB5bW90bmZoaGl3dWdqd3NibXNjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg0OTcyMDgsImV4cCI6MjA4NDA3MzIwOH0.-zuyCvMj0A-Vzm30q0hLgev-0z8bjgvgPokBwtnFrH0";
+
+const { createClient } = supabase;
+const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+/* ===============================
+   TOAST
+================================ */
+
+function toast(message,type){
+  const t = document.getElementById("toast");
+  t.innerText = message;
+  t.className = "toast show " + type;
+  setTimeout(()=> t.classList.remove("show"),3000);
+}
+
+/* ===============================
+   EYE TOGGLE
+================================ */
+
+const passwordInput = document.getElementById("password");
+document.getElementById("togglePassword").addEventListener("click", () => {
+  passwordInput.type =
+    passwordInput.type === "password" ? "text" : "password";
+});
+
+/* ===============================
+   LOGIN
+================================ */
+
+async function login(){
+
+  const email = document.getElementById("email").value.trim();
+  const password = passwordInput.value.trim();
+
+  if(!email || !password){
+    toast("Enter email and password","error");
+    return;
+  }
+
+  toast("Signing in...","info");
+
+  try{
+
+    const { data, error } =
+      await sb.auth.signInWithPassword({ email, password });
+
+    if(error){
+      toast(error.message,"error");
+      return;
+    }
+
+    if(!data.user){
+      toast("Login failed","error");
+      return;
+    }
+
+    toast("Login successful","success");
+
+    setTimeout(()=>{
+      window.location.href = "admin-dashboard.html";
+    },1000);
+
+  }catch(err){
+    toast("Network error. Deploy online.","error");
+  }
+}
+
+</script>
+
+</body>
+</html>
